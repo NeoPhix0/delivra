@@ -1,0 +1,53 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-native",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@components/*": [
+        "./src/components/*"
+      ],
+      "@context/*": [
+        "./src/context/*"
+      ],
+      "@services/*": [
+        "./src/services/*"
+      ],
+      "@constants/*": [
+        "./src/constants/*"
+      ],
+      "@i18n/*": [
+        "./src/i18n/*"
+      ],
+      "@utils/*": [
+        "./src/utils/*"
+      ],
+      "delivra-shared": [
+        "../delivra-shared/src"
+      ],
+      "delivra-shared/*": [
+        "../delivra-shared/src/*"
+      ]
+    },
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "resolveJsonModule": true
+  },
+  "exclude": [
+    "node_modules"
+  ],
+  "extends": "expo/tsconfig.base",
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "../delivra-shared/src/**/*.ts"
+  ]
+}

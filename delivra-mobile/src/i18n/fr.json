@@ -1,0 +1,26 @@
+{
+  "common": {
+    "appName": "Delivra",
+    "loading": "Chargement...",
+    "back": "Retour",
+    "next": "Suivant",
+    "skip": "Passer",
+    "getStarted": "Commencer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "logout": "Déconnexion",
+    "search": "Rechercher",
+    "filter": "Filtrer"
+  },
+  "auth": {
+    "welcome": "Bienvenue sur Delivra",
+    "login": "Connexion",
+    "register": "Créer un compte",
+    "guest": "Continuer en tant qu'invité",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.cache/
+.expo/
+.env
+
+**/node_modules/
+**/dist/
+**/.cache/
+**/.expo/
+**/.env
+
+**/.git
