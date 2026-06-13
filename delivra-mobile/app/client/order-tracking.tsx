@@ -16,21 +16,10 @@ import {
   ActivityIndicator,
   Linking,
 } from "react-native";
+import LeafletMap from "@components/shared/LeafletMap";
 import { deliveryService } from "@services/api";
 import { SharedHeader } from "@components/shared/SharedHeader";
 import useDeliveryTracking from "../../src/hooks/useDeliveryTracking";
-
-// Dynamic import for react-native-maps to avoid web bundling issues
-/* eslint-disable */
-// @ts-ignore
-let MapView: any, Marker: any, PROVIDER_DEFAULT: any;
-if (Platform.OS !== 'web') {
-  const mapsModule = require("react-native-maps");
-  MapView = mapsModule.default;
-  Marker = mapsModule.Marker;
-  PROVIDER_DEFAULT = mapsModule.PROVIDER_DEFAULT;
-}
-/* eslint-enable */
 
 
 const steps = ["Pending", "Accepted", "On the way", "Delivered"];
@@ -288,62 +277,19 @@ export default function OrderTrackingScreen() {
                 openGoogleMaps(lat, lng);
               }}
             >
-              <MapView
-                style={styles.map}
-                provider={PROVIDER_DEFAULT}
-                initialRegion={{
-                  latitude: driverLocation?.lat ?? delivery?.pickupLat ?? 36.7538,
-                  longitude: driverLocation?.lng ?? delivery?.pickupLng ?? 3.0588,
-                  latitudeDelta: 0.05,
-                  longitudeDelta: 0.05,
-                }}
-                region={driverLocation ? {
-                  latitude: driverLocation.lat,
-                  longitude: driverLocation.lng,
-                  latitudeDelta: 0.02,
-                  longitudeDelta: 0.02,
-                } : undefined}
-              >
-                <Marker
-                  coordinate={{
+              <View style={{ height: 250, width: '100%' }}>
+                <LeafletMap
+                  region={{
                     latitude: driverLocation?.lat ?? delivery?.pickupLat ?? 36.7538,
                     longitude: driverLocation?.lng ?? delivery?.pickupLng ?? 3.0588,
                   }}
-                >
-                  <LinearGradient
-                    colors={[colors.secondary, colors.secondaryDark]}
-                    style={styles.driverMarker}
-                  >
-                    <Text style={styles.driverMarkerText}>🚚</Text>
-                  </LinearGradient>
-                </Marker>
-                {delivery?.pickupLat && delivery?.pickupLng && (
-                  <Marker
-                    coordinate={{
-                      latitude: delivery.pickupLat,
-                      longitude: delivery.pickupLng,
-                    }}
-                    title="Pickup"
-                  >
-                    <View style={styles.destinationMarker}>
-                      <Text style={styles.destinationMarkerText}>📦</Text>
-                    </View>
-                  </Marker>
-                )}
-                {delivery?.deliveryLat && delivery?.deliveryLng && (
-                  <Marker
-                    coordinate={{
-                      latitude: delivery.deliveryLat,
-                      longitude: delivery.deliveryLng,
-                    }}
-                    title="Delivery"
-                  >
-                    <View style={styles.destinationMarker}>
-                      <Text style={styles.destinationMarkerText}>🏠</Text>
-                    </View>
-                  </Marker>
-                )}
-              </MapView>
+                  markers={[
+                    driverLocation && { latitude: driverLocation.lat, longitude: driverLocation.lng, title: 'Driver', emoji: '🚚' },
+                    delivery?.pickupLat && delivery?.pickupLng && { latitude: delivery.pickupLat, longitude: delivery.pickupLng, title: 'Pickup', emoji: '📦' },
+                    delivery?.deliveryLat && delivery?.deliveryLng && { latitude: delivery.deliveryLat, longitude: delivery.deliveryLng, title: 'Delivery', emoji: '🏠' },
+                  ].filter(Boolean) as any}
+                />
+              </View>
             </TouchableOpacity>
             <Text style={styles.mapHint}>Tap map to open in Google Maps</Text>
             <TouchableOpacity style={styles.mapControl}>

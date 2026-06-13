@@ -16,7 +16,7 @@ import {
   View,
   Linking,
 } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import LeafletMap from "@components/shared/LeafletMap";
 import * as Location from "expo-location";
 import { driverService, deliveryService } from "@services/api";
 import { SharedHeader } from "@components/shared/SharedHeader";
@@ -305,50 +305,18 @@ export default function ActiveDeliveryScreen() {
                 openGoogleMaps(lat, lng, 'Delivery');
               }}
             >
-              <MapView
-                provider={PROVIDER_DEFAULT}
-                style={styles.map}
-                initialRegion={{
+              <LeafletMap
+                region={{
                   latitude: driverCoords?.latitude ?? delivery?.pickupLat ?? 36.7538,
                   longitude: driverCoords?.longitude ?? delivery?.pickupLng ?? 3.0588,
-                  latitudeDelta: 0.05,
-                  longitudeDelta: 0.05,
                 }}
-                region={driverCoords ? {
-                  latitude: driverCoords.latitude,
-                  longitude: driverCoords.longitude,
-                  latitudeDelta: 0.02,
-                  longitudeDelta: 0.02,
-                } : undefined}
-              >
-                {driverCoords && (
-                  <Marker coordinate={driverCoords} title="You">
-                    <View style={styles.driverMarker}>
-                      <Text style={styles.driverMarkerText}>🚗</Text>
-                    </View>
-                  </Marker>
-                )}
-                {delivery?.pickupLat && delivery?.pickupLng && (
-                  <Marker
-                    coordinate={{ latitude: delivery.pickupLat, longitude: delivery.pickupLng }}
-                    title="Pickup"
-                  >
-                    <View style={styles.destinationMarker}>
-                      <Text style={styles.destinationMarkerText}>📦</Text>
-                    </View>
-                  </Marker>
-                )}
-                {delivery?.deliveryLat && delivery?.deliveryLng && (
-                  <Marker
-                    coordinate={{ latitude: delivery.deliveryLat, longitude: delivery.deliveryLng }}
-                    title="Delivery"
-                  >
-                    <View style={styles.destinationMarker}>
-                      <Text style={styles.destinationMarkerText}>🏠</Text>
-                    </View>
-                  </Marker>
-                )}
-              </MapView>
+                markers={[
+                  driverCoords && { latitude: driverCoords.latitude, longitude: driverCoords.longitude, title: 'You', emoji: '🚗' },
+                  delivery?.pickupLat && delivery?.pickupLng && { latitude: delivery.pickupLat, longitude: delivery.pickupLng, title: 'Pickup', emoji: '📦' },
+                  delivery?.deliveryLat && delivery?.deliveryLng && { latitude: delivery.deliveryLat, longitude: delivery.deliveryLng, title: 'Delivery', emoji: '🏠' },
+                ].filter(Boolean) as any}
+                style={styles.map}
+              />
             </TouchableOpacity>
             <Text style={styles.mapHint}>Tap map to open in Google Maps</Text>
           </View>

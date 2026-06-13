@@ -16,13 +16,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import LeafletMap from "@components/shared/LeafletMap";
 import { SharedHeader } from "@components/shared/SharedHeader";
+import { categoryService } from '@services/api';
 import { httpClient } from '@services/httpClient';
 
 
 export default function DeliveryDetailsScreen() {
   const { categoryId, categoryIcon } = useLocalSearchParams();
+  const [categoryInfo, setCategoryInfo] = useState<{ displayName: string; icon: string; color: string } | null>(null);
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupPhone, setPickupPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -58,6 +60,43 @@ export default function DeliveryDetailsScreen() {
   const orbAnim2 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    const categoryEmojis: Record<string, string> = {
+      food: "🍕",
+      documents: "📄",
+      electronics: "📱",
+      clothing: "👕",
+      grocery: "🛒",
+      other: "📦",
+    };
+    const categoryColors: Record<string, string> = {
+      food: colors.secondary,
+      documents: colors.primary,
+      electronics: colors.primary,
+      clothing: colors.success,
+      grocery: colors.secondary,
+      other: colors.primary,
+    };
+
+    // Charger les infos de la catégorie depuis l'API
+    if (categoryId) {
+      categoryService.getCategoryById(categoryId as string).then((cat: any) => {
+        if (cat) {
+          const catName = (cat.name || 'other').toLowerCase();
+          setCategoryInfo({
+            displayName: cat.displayName || cat.name || 'Other',
+            icon: categoryEmojis[catName] || "📦",
+            color: cat.color || categoryColors[catName] || colors.primary,
+          });
+        }
+      }).catch(() => {});
+    } else {
+      setCategoryInfo({
+        displayName: 'Other',
+        icon: "📦",
+        color: colors.primary,
+      });
+    }
+
     // Staggered entrance animations
     Animated.stagger(80, [
       Animated.parallel([
@@ -205,40 +244,6 @@ export default function DeliveryDetailsScreen() {
     });
   };
 
-  const getCategoryInfo = () => {
-    const icons: Record<string, string> = {
-      documents: "📄",
-      food: "🍕",
-      electronics: "📱",
-      clothing: "👕",
-      grocery: "🛒",
-      other: "📦",
-    };
-    const names: Record<string, string> = {
-      documents: "Documents",
-      food: "Food",
-      electronics: "Electronics",
-      clothing: "Clothing",
-      grocery: "Grocery",
-      other: "Other",
-    };
-    const catColors: Record<string, string> = {
-      documents: colors.primary,
-      food: colors.secondary,
-      electronics: colors.primary,
-      clothing: colors.success,
-      grocery: colors.secondary,
-      other: colors.primary,
-    };
-    return {
-      icon: icons[categoryId as string] || icons[categoryIcon as string] || "📦",
-      name: names[categoryId as string] || names[categoryIcon as string] || "Other",
-      color: catColors[categoryId as string] || catColors[categoryIcon as string] || colors.primary,
-    };
-  };
-
-  const categoryInfo = getCategoryInfo();
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -297,20 +302,20 @@ export default function DeliveryDetailsScreen() {
             </View>
             <View style={styles.categoryCardContent}>
               <LinearGradient
-                colors={[categoryInfo.color + "20", categoryInfo.color + "10"]}
+                colors={[(categoryInfo?.color || colors.primary) + "20", (categoryInfo?.color || colors.primary) + "10"]}
                 style={styles.categoryIconWrapper}
               >
-                <Text style={styles.categoryCardIcon}>{categoryInfo.icon}</Text>
+                <Text style={styles.categoryCardIcon}>{categoryInfo?.icon || "📦"}</Text>
               </LinearGradient>
               <View>
                 <Text style={styles.categoryCardLabel}>Category</Text>
                 <Text
-                  style={[
-                    styles.categoryCardName,
-                    { color: categoryInfo.color },
-                  ]}
-                >
-                  {categoryInfo.name}
+                    style={[
+                      styles.categoryCardName,
+                      { color: categoryInfo?.color || colors.primary },
+                    ]}
+                  >
+                    {categoryInfo?.displayName || "Other"}
                 </Text>
               </View>
               <View style={styles.categoryChevron}>
@@ -697,15 +702,15 @@ export default function DeliveryDetailsScreen() {
           {/* Map Preview */}
           {selectedCoords && Platform.OS !== 'web' && (
             <View style={styles.mapPreview}>
-              <MapView
-                provider={PROVIDER_DEFAULT}
-                style={{ flex: 1 }}
+              <LeafletMap
                 region={mapRegion}
+                markers={[
+                  selectedCoords && { latitude: selectedCoords.latitude, longitude: selectedCoords.longitude }
+                ].filter(Boolean) as any}
                 scrollEnabled={false}
                 zoomEnabled={false}
-              >
-                <Marker coordinate={selectedCoords} />
-              </MapView>
+                style={{ flex: 1 }}
+              />
             </View>
           )}
 
