@@ -16,6 +16,7 @@ import { deliveryService } from "@services/api";
 
 interface DeliveryDetail {
   id: string;
+  trackingNumber?: string;
   status: string;
   pickup_address?: string;
   delivery_address?: string;
@@ -142,7 +143,7 @@ export default function OrderDetailsScreen() {
         {/* Order ID Card */}
         <View style={styles.orderIdCard}>
           <Text style={styles.orderIdLabel}>Order ID</Text>
-          <Text style={styles.orderIdValue}>#{delivery.id}</Text>
+          <Text style={styles.orderIdValue}>{delivery.trackingNumber || 'N/A'}</Text>
           <Text style={styles.orderDate}>
             {formatDate(delivery.createdAt)}
           </Text>

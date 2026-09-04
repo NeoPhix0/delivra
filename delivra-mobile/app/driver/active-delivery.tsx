@@ -71,6 +71,21 @@ export default function ActiveDeliveryScreen() {
     });
   };
 
+  const openGoogleMapsDirections = (originLat: number, originLng: number, destLat: number, destLng: number) => {
+    const url = Platform.select({
+      ios: `comgooglemaps://?saddr=${originLat},${originLng}&daddr=${destLat},${destLng}&directionsmode=driving`,
+      android: `google.navigation:q=${destLat},${destLng}&mode=d`,
+    });
+    const fallback = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${destLat},${destLng}&travelmode=driving`;
+    Linking.canOpenURL(url!).then((supported) => {
+      if (supported) {
+        Linking.openURL(url!);
+      } else {
+        Linking.openURL(fallback);
+      }
+    });
+  };
+
   const loadDelivery = useCallback(async () => {
     if (!deliveryId) return;
     try {
@@ -251,7 +266,18 @@ export default function ActiveDeliveryScreen() {
     deliveryAddress: delivery.deliveryAddress || delivery.delivery_address || '—',
     deliveryPhone: delivery.deliveryPhone || delivery.delivery_phone || '—',
     customer: delivery.client?.fullName || delivery.client_name || '—',
+    customerPhone: delivery.client?.phone || delivery.client_phone || '—',
     amount: `${delivery.totalPrice || delivery.total_price || 0} DA`,
+  };
+
+  const handleCall = (phone: string, name: string) => {
+    if (!phone || phone === '—') {
+      Alert.alert('No phone number', 'No phone number available for this contact.');
+      return;
+    }
+    Linking.openURL(`tel:${phone}`).catch(() =>
+      Alert.alert('Error', 'Unable to open phone dialer.')
+    );
   };
 
   return (
@@ -300,19 +326,32 @@ export default function ActiveDeliveryScreen() {
               activeOpacity={1}
               style={{ flex: 1 }}
               onPress={() => {
-                const lat = driverCoords?.latitude ?? delivery?.pickupLat ?? 36.7538;
-                const lng = driverCoords?.longitude ?? delivery?.pickupLng ?? 3.0588;
-                openGoogleMaps(lat, lng, 'Delivery');
+                const isOnTheWay = delivery?.status === 'ON_THE_WAY';
+                if (isOnTheWay && driverCoords && delivery?.deliveryLat && delivery?.deliveryLng) {
+                  openGoogleMapsDirections(driverCoords.latitude, driverCoords.longitude, delivery.deliveryLat, delivery.deliveryLng);
+                  return;
+                } else if (delivery?.pickupLat && delivery?.deliveryLat) {
+                  openGoogleMapsDirections(delivery.pickupLat, delivery.pickupLng, delivery.deliveryLat, delivery.deliveryLng);
+                  return;
+                } else {
+                  const lat = delivery?.pickupLat ?? 36.7538;
+                  const lng = delivery?.pickupLng ?? 3.0588;
+                  openGoogleMaps(lat, lng, 'Delivery');
+                }
               }}
             >
               <LeafletMap
                 region={{
-                  latitude: driverCoords?.latitude ?? delivery?.pickupLat ?? 36.7538,
-                  longitude: driverCoords?.longitude ?? delivery?.pickupLng ?? 3.0588,
+                  latitude: (delivery?.status === 'ON_THE_WAY')
+                    ? (driverCoords?.latitude ?? delivery?.deliveryLat ?? 36.7538)
+                    : (delivery?.pickupLat ?? 36.7538),
+                  longitude: (delivery?.status === 'ON_THE_WAY')
+                    ? (driverCoords?.longitude ?? delivery?.deliveryLng ?? 3.0588)
+                    : (delivery?.pickupLng ?? 3.0588),
                 }}
                 markers={[
-                  driverCoords && { latitude: driverCoords.latitude, longitude: driverCoords.longitude, title: 'You', emoji: '🚗' },
-                  delivery?.pickupLat && delivery?.pickupLng && { latitude: delivery.pickupLat, longitude: delivery.pickupLng, title: 'Pickup', emoji: '📦' },
+                  delivery?.status === 'ON_THE_WAY' && driverCoords && { latitude: driverCoords.latitude, longitude: driverCoords.longitude, title: 'You', emoji: '🚗' },
+                  delivery?.status !== 'ON_THE_WAY' && delivery?.pickupLat && delivery?.pickupLng && { latitude: delivery.pickupLat, longitude: delivery.pickupLng, title: 'Pickup', emoji: '📦' },
                   delivery?.deliveryLat && delivery?.deliveryLng && { latitude: delivery.deliveryLat, longitude: delivery.deliveryLng, title: 'Delivery', emoji: '🏠' },
                 ].filter(Boolean) as any}
                 style={styles.map}
@@ -330,7 +369,7 @@ export default function ActiveDeliveryScreen() {
             <Text style={styles.locationLabel}>Pickup Location</Text>
             <Text style={styles.locationName}>{deliveryData.pickup}</Text>
             <Text style={styles.locationAddress}>{deliveryData.pickupAddress}</Text>
-            <TouchableOpacity style={[styles.callBtn, { backgroundColor: colors.success }]}>
+            <TouchableOpacity style={[styles.callBtn, { backgroundColor: colors.success }]} onPress={() => handleCall(deliveryData.pickupPhone, 'Pickup Contact')}>
               <Feather name="phone" size={14} color={colors.white} />
               <Text style={styles.callBtnText}>Call Pickup</Text>
             </TouchableOpacity>
@@ -345,7 +384,7 @@ export default function ActiveDeliveryScreen() {
             <Text style={styles.locationLabel}>Delivery Location</Text>
             <Text style={styles.locationName}>{deliveryData.delivery}</Text>
             <Text style={styles.locationAddress}>{deliveryData.deliveryAddress}</Text>
-            <TouchableOpacity style={[styles.callBtn, { backgroundColor: colors.success }]}>
+            <TouchableOpacity style={[styles.callBtn, { backgroundColor: colors.success }]} onPress={() => handleCall(deliveryData.deliveryPhone, 'Delivery Contact')}>
               <Feather name="phone" size={14} color={colors.white} />
               <Text style={styles.callBtnText}>Call Delivery</Text>
             </TouchableOpacity>
@@ -360,7 +399,7 @@ export default function ActiveDeliveryScreen() {
             <Text style={styles.locationLabel}>Customer</Text>
             <Text style={styles.locationName}>{deliveryData.customer}</Text>
             <Text style={styles.locationAddress}>Amount: {deliveryData.amount}</Text>
-            <TouchableOpacity style={[styles.callBtn, { backgroundColor: colors.success }]}>
+            <TouchableOpacity style={[styles.callBtn, { backgroundColor: colors.success }]} onPress={() => handleCall(deliveryData.customerPhone || '—', deliveryData.customer)}>
               <Feather name="phone" size={14} color={colors.white} />
               <Text style={styles.callBtnText}>Call Customer</Text>
             </TouchableOpacity>

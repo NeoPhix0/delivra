@@ -71,6 +71,8 @@ function ClientDashboardContent() {
         id: d.id, category: d.categoryName || d.category_name || "Delivery", driver: d.driverName || d.driver_name || "Assigned",
         status: d.status || "PENDING", date: new Date(d.createdAt || d.created_at).toLocaleDateString(),
         price: `${d.totalPrice || d.price || 0} DA`, icon: iconFor(d.categoryName || d.category_name), bgColor: bgFor(d.categoryName || d.category_name),
+        pickupAddress: d.pickupAddress || d.pickup_address || '',
+        deliveryAddress: d.deliveryAddress || d.delivery_address || '',
       }));
       setRecentOrders(orders);
       
@@ -143,7 +145,7 @@ function ClientDashboardContent() {
 
         <Animated.View style={{ opacity: fadeAnim }}><StatsSection stats={stats} /></Animated.View>
         <Animated.View style={{ opacity: fadeAnim }}><CategoryList categories={categories} /></Animated.View>
-        <Animated.View style={{ opacity: fadeAnim }}><QuickActions onActionPress={() => {}} /></Animated.View>
+        <Animated.View style={{ opacity: fadeAnim }}><QuickActions onActionPress={() => {}} activeDeliveryId={recentOrders.find(o => ['ACCEPTED', 'PICKED_UP', 'ON_THE_WAY'].includes(o.status))?.id} /></Animated.View>
         <Animated.View style={{ opacity: fadeAnim }}><SpecialOffers offers={OFFERS} /></Animated.View>
 
         <Animated.View style={[S.recent, { opacity: fadeAnim }]}>

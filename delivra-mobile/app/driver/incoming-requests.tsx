@@ -6,8 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  FlatList,
-  ListRenderItemInfo,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,8 +16,11 @@ import {
 import { driverService } from "@services/api";
 import { SharedHeader } from "@components/shared/SharedHeader";
 
+type TabType = "forYou" | "open";
+
 interface IncomingRequest {
   id: string;
+  status?: string;
   pickup_address?: string;
   delivery_address?: string;
   distance_km?: number;
@@ -40,6 +42,7 @@ interface IncomingRequest {
 }
 
 export default function IncomingRequestsScreen() {
+  const [activeTab, setActiveTab] = useState<TabType>("forYou");
   const [requests, setRequests] = useState<IncomingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +83,7 @@ export default function IncomingRequestsScreen() {
       const raw = Array.isArray(data) ? data : [];
       setRequests(raw.map((d: any) => ({
         id: d.id,
+        status: d.status || '',
         pickup_address: d.pickupAddress || d.pickup_address || '',
         delivery_address: d.deliveryAddress || d.delivery_address || '',
         distance_km: d.distanceKm ?? d.distance_km ?? 0,
@@ -149,8 +153,17 @@ export default function IncomingRequestsScreen() {
     }
   };
 
-  const renderRequestCard = ({ item, index }: ListRenderItemInfo<IncomingRequest>) => (
+  const preSelected = requests.filter(r => r.status === 'AWAITING_DRIVER_CONFIRMATION');
+  const openRequests = requests.filter(r => r.status === 'PENDING');
+  const requestsData = {
+    forYou: preSelected,
+    open: openRequests,
+  };
+  const currentItems = requestsData[activeTab];
+
+  const renderRequestCard = (item: IncomingRequest, index: number) => (
     <Animated.View
+      key={item.id}
       style={[
         styles.card,
         {
@@ -338,23 +351,58 @@ export default function IncomingRequestsScreen() {
         </View>
       )}
 
-      <FlatList
-        data={requests}
-        renderItem={renderRequestCard}
-        keyExtractor={(item) => item.id}
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        {(["forYou", "open"] as TabType[]).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tab, activeTab === tab && styles.tabActive]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === tab && styles.tabTextActive,
+              ]}
+            >
+              {tab === "forYou" ? "For You" : "Open"}
+            </Text>
+            <View
+              style={[
+                styles.tabBadge,
+                activeTab === tab && styles.tabBadgeActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabBadgeText,
+                  activeTab === tab && styles.tabBadgeTextActive,
+                ]}
+              >
+                {requestsData[tab].length}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
-        refreshing={loading}
-        onRefresh={loadAvailableRequests}
-        ListEmptyComponent={
-          !error ? (
+      >
+        {currentItems.length > 0 ? (
+          currentItems.map((item, index) => renderRequestCard(item, index))
+        ) : (
+          !error && (
             <View style={styles.emptyContainer}>
               <Feather name="inbox" size={48} color={colors.grayLight} />
-              <Text style={styles.emptyText}>No incoming requests</Text>
+              <Text style={styles.emptyText}>
+                {activeTab === "forYou" ? "No requests for you right now" : "No open deliveries right now"}
+              </Text>
             </View>
-          ) : null
-        }
-      />
+          )
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -423,6 +471,53 @@ const styles = StyleSheet.create({
     color: colors.grayLight,
     marginTop: 12,
   },
+  tabsContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    backgroundColor: colors.white,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 30,
+    backgroundColor: colors.graySoft,
+    gap: 6,
+  },
+  tabActive: {
+    backgroundColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: colors.gray,
+  },
+  tabTextActive: {
+    color: colors.white,
+  },
+  tabBadge: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+    minWidth: 22,
+    alignItems: "center",
+  },
+  tabBadgeActive: {
+    backgroundColor: colors.white,
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: colors.primary,
+  },
+  tabBadgeTextActive: {
+    color: colors.primary,
+  },
   listContainer: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -449,6 +544,8 @@ const styles = StyleSheet.create({
   },
   distanceContainer: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   distanceBadge: {
     flexDirection: "row",

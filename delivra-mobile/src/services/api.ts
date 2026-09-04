@@ -70,8 +70,9 @@ export const deliveryService = {
     const response = await httpClient.patch(`/deliveries/${id}`, data);
     return adaptKeys(response);
   },
-  async getAvailableDrivers(params?: any) {
-    const data = await httpClient.get('/drivers/available', { params });
+  async getAvailableDrivers(pickupLat?: string, pickupLng?: string) {
+    const params = pickupLat && pickupLng ? `?pickupLat=${pickupLat}&pickupLng=${pickupLng}` : '';
+    const data = await httpClient.get(`/drivers/available${params}`);
     if (Array.isArray(data)) return adaptKeys(data);
     if (data.drivers) {
       data.drivers = adaptKeys(data.drivers);
@@ -87,6 +88,10 @@ export const deliveryService = {
     if (data.deliveries) {
       data.deliveries = adaptKeys(data.deliveries);
     }
+    return adaptKeys(data);
+  },
+  async rateDelivery(id: string, rating: number, review?: string) {
+    const data = await httpClient.post(`/deliveries/${id}/rate`, { rating, review });
     return adaptKeys(data);
   },
 };
@@ -131,10 +136,10 @@ export const driverService = {
     return adaptKeys(response);
   },
   async updateOnlineStatus(isOnline: boolean) {
-    return await httpClient.put('/driver/online-status', { is_online: isOnline });
+    return adaptKeys(await httpClient.put('/driver/online-status', { is_online: isOnline }));
   },
   async updateLocation(lat: number, lng: number) {
-    return await httpClient.put('/driver/location', { lat, lng });
+    return adaptKeys(await httpClient.put('/driver/location', { lat, lng }));
   },
   async getEarnings(period?: string) {
     const data = await httpClient.get('/driver/earnings', { params: { period } });
@@ -142,6 +147,10 @@ export const driverService = {
   },
   async getEarningsStats() {
     const data = await httpClient.get('/driver/earnings/stats');
+    return adaptKeys(data);
+  },
+  async getRatings() {
+    const data = await httpClient.get('/driver/ratings');
     return adaptKeys(data);
   },
 };

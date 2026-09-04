@@ -39,6 +39,7 @@ const categoryImages: Record<string, string> = {
 interface Category {
   id: string;
   name: string;
+  displayName?: string;
   icon?: string;
   color?: string;
   bgColor?: string;
@@ -82,6 +83,7 @@ export default function SelectCategoryScreen() {
         const transformed: Category[] = items.map((cat: any, index: number) => ({
           id: cat.id || cat.icon || String(index),
           name: cat.name || 'Other',
+          displayName: cat.displayName || cat.name || 'Other',
           image: cat.image || categoryImages[cat.icon || 'other'] || categoryImages.other,
           color: categoryColors[index % categoryColors.length],
           bgColor: categoryColors[index % categoryColors.length] + "15",
@@ -169,6 +171,9 @@ export default function SelectCategoryScreen() {
       params: {
         categoryId: selectedCategory,
         categoryIcon: categories.find(c => c.id === selectedCategory)?.slug || 'other',
+        categoryName: categories.find(c => c.id === selectedCategory)?.displayName
+          || categories.find(c => c.id === selectedCategory)?.name
+          || 'Other',
       },
     });
   };

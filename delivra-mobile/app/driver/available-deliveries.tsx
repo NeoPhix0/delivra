@@ -18,12 +18,12 @@ import { driverService } from "@services/api";
 
 interface AvailableDelivery {
   id: string;
-  category_name?: string;
-  estimated_price?: string | number;
-  total_price?: string | number;
-  pickup_address?: string;
-  delivery_address?: string;
-  distance_km?: number;
+  categoryName?: string;
+  estimatedPrice?: string | number;
+  totalPrice?: string | number;
+  pickupAddress?: string;
+  deliveryAddress?: string;
+  distanceKm?: number;
 }
 
 export default function AvailableDeliveriesScreen() {
@@ -39,7 +39,7 @@ export default function AvailableDeliveriesScreen() {
       setLoading(true);
       setError(null);
       const data = await driverService.getAvailableDeliveries();
-      setDeliveries(Array.isArray(data) ? data : (data?.deliveries || []));
+      setDeliveries(Array.isArray(data) ? data : (data?.data || data?.deliveries || []));
     } catch (err: any) {
       console.error("Load available deliveries error:", err);
       setError(err.message || 'Failed to load available deliveries');
@@ -104,9 +104,9 @@ export default function AvailableDeliveriesScreen() {
   const renderDeliveryCard = ({ item }: ListRenderItemInfo<AvailableDelivery>) => (
     <Animated.View style={[styles.deliveryCard, { opacity: fadeAnim }]}>
       <View style={styles.cardHeader}>
-        <Text style={styles.categoryName}>{item.category_name || "General"}</Text>
+        <Text style={styles.categoryName}>{item.categoryName || "General"}</Text>
         <Text style={styles.estimatedPrice}>
-          {item.estimated_price || item.total_price || 0} DA
+          {item.estimatedPrice || item.totalPrice || 0} DA
         </Text>
       </View>
       
@@ -117,7 +117,7 @@ export default function AvailableDeliveriesScreen() {
           </View>
           <View style={styles.locationContent}>
             <Text style={styles.locationLabel}>Pickup</Text>
-            <Text style={styles.locationText}>{item.pickup_address}</Text>
+            <Text style={styles.locationText}>{item.pickupAddress}</Text>
           </View>
         </View>
         
@@ -129,15 +129,15 @@ export default function AvailableDeliveriesScreen() {
           </View>
           <View style={styles.locationContent}>
             <Text style={styles.locationLabel}>Delivery</Text>
-            <Text style={styles.locationText}>{item.delivery_address}</Text>
+            <Text style={styles.locationText}>{item.deliveryAddress}</Text>
           </View>
         </View>
       </View>
 
-      {item.distance_km && (
+      {item.distanceKm && (
         <View style={styles.infoRow}>
           <Feather name="navigation" size={14} color={colors.grayLight} />
-          <Text style={styles.infoText}>{item.distance_km} km</Text>
+          <Text style={styles.infoText}>{item.distanceKm} km</Text>
         </View>
       )}
 

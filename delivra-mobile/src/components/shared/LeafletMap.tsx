@@ -35,11 +35,18 @@ export default function LeafletMap({ region, markers = [], style, scrollEnabled 
   const zoom = 15;
 
   const markersJs = markers
-    .filter(m => m.latitude && m.longitude)
+    .filter(m => m.latitude != null && m.longitude != null)
     .map(m => `
-      L.marker([${m.latitude}, ${m.longitude}])
+      L.marker([${m.latitude}, ${m.longitude}], {
+        icon: L.divIcon({
+          html: '<div style="font-size:28px;line-height:1;">${m.emoji || '📍'}</div>',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          className: ''
+        })
+      })
         .addTo(map)
-        .bindPopup('${m.emoji || '📍'} ${m.title || ''}');
+        .bindPopup('${m.title || ''}');
     `).join('\n');
 
   const html = `
@@ -48,7 +55,8 @@ export default function LeafletMap({ region, markers = [], style, scrollEnabled 
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+              crossorigin=""></script>
       <style>
         body { margin: 0; padding: 0; }
         #map { width: 100vw; height: 100vh; }
@@ -56,18 +64,34 @@ export default function LeafletMap({ region, markers = [], style, scrollEnabled 
     </head>
     <body>
       <div id="map"></div>
+      <div id="error" style="display:none;color:red;padding:10px;">Map failed to load</div>
       <script>
-        var map = L.map('map', {
-          zoomControl: ${zoomEnabled},
-          dragging: ${scrollEnabled},
-          scrollWheelZoom: false,
-        }).setView([${region.latitude}, ${region.longitude}], ${zoom});
+        window.onerror = function(msg) {
+          var el = document.getElementById('error');
+          if (el) { el.style.display = 'block'; el.innerText = 'Error: ' + msg; }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+          // Fix Leaflet default icon paths broken in WebView
+          delete L.Icon.Default.prototype._getIconUrl;
+          L.Icon.Default.mergeOptions({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+          var map = L.map('map', {
+            zoomControl: ${zoomEnabled},
+            dragging: ${scrollEnabled},
+            scrollWheelZoom: false,
+          }).setView([${region.latitude}, ${region.longitude}], ${zoom});
 
-        ${markersJs}
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            crossOrigin: true,
+          }).addTo(map);
+
+          ${markersJs}
+        });
       </script>
     </body>
     </html>
@@ -82,6 +106,7 @@ export default function LeafletMap({ region, markers = [], style, scrollEnabled 
       javaScriptEnabled={true}
       domStorageEnabled={true}
       startInLoadingState={true}
+      cacheEnabled={true}
       mixedContentMode="always"
       allowFileAccess={true}
       allowUniversalAccessFromFileURLs={true}

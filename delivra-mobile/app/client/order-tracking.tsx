@@ -26,9 +26,10 @@ const steps = ["Pending", "Accepted", "On the way", "Delivered"];
 
 export default function OrderTrackingScreen() {
   const { id } = useLocalSearchParams();
-  const { driverLocation, isConnected } = useDeliveryTracking(id as string | null);
+  const { driverLocation, isConnected, deliveryStatus } = useDeliveryTracking(id as string | null);
   const [loading, setLoading] = useState(true);
   const [delivery, setDelivery] = useState<any>(null);
+  const currentStatus = deliveryStatus || delivery?.status;
   const [currentStep, setCurrentStep] = useState(1);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -37,19 +38,24 @@ export default function OrderTrackingScreen() {
   const orbAnim1 = useRef(new Animated.Value(0)).current;
   const orbAnim2 = useRef(new Animated.Value(0)).current;
 
-  const openGoogleMaps = (lat: number, lng: number, label?: string) => {
-    const url = Platform.select({
-      ios: `comgooglemaps://?q=${lat},${lng}&center=${lat},${lng}`,
-      android: `geo:${lat},${lng}?q=${lat},${lng}(${label ?? ''})`,
-    });
-    const fallback = `https://www.google.com/maps?q=${lat},${lng}`;
-    Linking.canOpenURL(url!).then((supported) => {
-      if (supported) {
-        Linking.openURL(url!);
-      } else {
-        Linking.openURL(fallback);
-      }
-    });
+  const handleOpenMaps = () => {
+    const isOnTheWay = currentStatus === 'ON_THE_WAY';
+    let url;
+    if (isOnTheWay && driverLocation) {
+      // Show route from driver's current location to delivery address
+      const destLat = delivery?.deliveryLat ?? driverLocation.lat;
+      const destLng = delivery?.deliveryLng ?? driverLocation.lng;
+      url = `https://www.google.com/maps/dir/?api=1&origin=${driverLocation.lat},${driverLocation.lng}&destination=${destLat},${destLng}&travelmode=driving`;
+    } else if (delivery?.pickupLat && delivery?.deliveryLat) {
+      // Show route from pickup to delivery address
+      url = `https://www.google.com/maps/dir/?api=1&origin=${delivery.pickupLat},${delivery.pickupLng}&destination=${delivery.deliveryLat},${delivery.deliveryLng}&travelmode=driving`;
+    } else {
+      // Fallback: single point if one of the addresses is missing
+      const lat = delivery?.pickupLat ?? 36.7538;
+      const lng = delivery?.pickupLng ?? 3.0588;
+      url = `https://www.google.com/maps?q=${lat},${lng}`;
+    }
+    Linking.openURL(url).catch(() => Alert.alert('Error', 'Unable to open maps.'));
   };
 
   useEffect(() => {
@@ -68,6 +74,7 @@ export default function OrderTrackingScreen() {
       // Determine current step based on status
       const statusToStep: Record<string, number> = {
         PENDING: 0,
+        AWAITING_DRIVER_CONFIRMATION: 0,
         ACCEPTED: 1,
         PICKED_UP: 2,
         ON_THE_WAY: 3,
@@ -206,7 +213,7 @@ export default function OrderTrackingScreen() {
             style={styles.orderIdGradient}
           >
             <Text style={styles.orderIdLabel}>Order ID</Text>
-            <Text style={styles.orderIdValue}>{delivery?.id || 'N/A'}</Text>
+            <Text style={styles.orderIdValue}>{delivery?.trackingNumber || 'N/A'}</Text>
           </LinearGradient>
         </Animated.View>
 
@@ -271,21 +278,17 @@ export default function OrderTrackingScreen() {
           >
             <TouchableOpacity
               activeOpacity={1}
-              onPress={() => {
-                const lat = driverLocation?.lat ?? delivery?.pickupLat ?? 36.7538;
-                const lng = driverLocation?.lng ?? delivery?.pickupLng ?? 3.0588;
-                openGoogleMaps(lat, lng);
-              }}
+              onPress={handleOpenMaps}
             >
               <View style={{ height: 250, width: '100%' }}>
                 <LeafletMap
                   region={{
-                    latitude: driverLocation?.lat ?? delivery?.pickupLat ?? 36.7538,
-                    longitude: driverLocation?.lng ?? delivery?.pickupLng ?? 3.0588,
+                    latitude: (currentStatus === 'ON_THE_WAY') ? (driverLocation?.lat ?? delivery?.deliveryLat ?? 36.7538) : (delivery?.pickupLat ?? 36.7538),
+                    longitude: (currentStatus === 'ON_THE_WAY') ? (driverLocation?.lng ?? delivery?.deliveryLng ?? 3.0588) : (delivery?.pickupLng ?? 3.0588),
                   }}
                   markers={[
-                    driverLocation && { latitude: driverLocation.lat, longitude: driverLocation.lng, title: 'Driver', emoji: '🚚' },
-                    delivery?.pickupLat && delivery?.pickupLng && { latitude: delivery.pickupLat, longitude: delivery.pickupLng, title: 'Pickup', emoji: '📦' },
+                    currentStatus === 'ON_THE_WAY' && driverLocation && { latitude: driverLocation.lat, longitude: driverLocation.lng, title: 'Driver', emoji: '🚚' },
+                    currentStatus !== 'ON_THE_WAY' && delivery?.pickupLat && delivery?.pickupLng && { latitude: delivery.pickupLat, longitude: delivery.pickupLng, title: 'Pickup', emoji: '📦' },
                     delivery?.deliveryLat && delivery?.deliveryLng && { latitude: delivery.deliveryLat, longitude: delivery.deliveryLng, title: 'Delivery', emoji: '🏠' },
                   ].filter(Boolean) as any}
                 />
@@ -318,7 +321,7 @@ export default function OrderTrackingScreen() {
                 <Text style={styles.driverName}>{delivery?.driver?.fullName || 'Not assigned'}</Text>
                 <View style={styles.ratingRow}>
                   <Feather name="star" size={14} color={colors.warning} />
-                  <Text style={styles.ratingText}>{delivery?.driver?.rating || 'N/A'}</Text>
+                  <Text style={styles.ratingText}>{delivery?.driver?.driverProfile?.rating || 'N/A'}</Text>
                 </View>
               </View>
               <TouchableOpacity
@@ -352,7 +355,13 @@ export default function OrderTrackingScreen() {
             </View>
             <View>
               <Text style={styles.etaLabel}>Estimated arrival</Text>
-              <Text style={styles.etaValue}>{delivery?.eta || 'Calculating...'}</Text>
+              <Text style={styles.etaValue}>
+                {(function() {
+                  if (delivery?.estimatedTime) return delivery.estimatedTime;
+                  if (delivery?.distanceKm) return `~${Math.round(delivery.distanceKm / 40 * 60)} min`;
+                  return 'Calculating...';
+                })()}
+              </Text>
             </View>
           </View>
           <View style={styles.etaRow}>
@@ -366,7 +375,7 @@ export default function OrderTrackingScreen() {
             </View>
             <View>
               <Text style={styles.etaLabel}>Distance</Text>
-              <Text style={styles.etaValue}>{delivery?.distance || 'Calculating...'}</Text>
+              <Text style={styles.etaValue}>{delivery?.distanceKm || 'Calculating...'}</Text>
             </View>
           </View>
         </Animated.View>
@@ -390,6 +399,16 @@ export default function OrderTrackingScreen() {
             </TouchableOpacity>
           </Animated.View>
         )}
+
+        {/* Go Home Button */}
+        <TouchableOpacity
+          style={styles.goHomeButton}
+          onPress={() => router.replace('/(tabs)')}
+          activeOpacity={0.85}
+        >
+          <Feather name="home" size={18} color={colors.primary} />
+          <Text style={styles.goHomeButtonText}>Go Home</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -692,5 +711,23 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 15,
     fontWeight: "bold",
+  },
+  goHomeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 16,
+    marginBottom: 30,
+    paddingVertical: 14,
+    borderRadius: 40,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.white,
+    gap: 8,
+  },
+  goHomeButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

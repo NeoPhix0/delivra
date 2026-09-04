@@ -1,30 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@context/AuthContext';
-import { socketService, LocationPayload } from '@services/socketService';
+import { socketService, LocationPayload, StatusPayload } from '@services/socketService';
 
 /**
  * Hook for tracking delivery in real-time via Socket.io
  * @param deliveryId - Delivery ID to track (null to stop tracking)
- * @returns Object containing driverLocation and isConnected status
+ * @returns Object containing driverLocation, deliveryStatus, and isConnected status
  */
 function useDeliveryTracking(deliveryId: string | null): {
   driverLocation: LocationPayload | null;
+  deliveryStatus: string | null;
   isConnected: boolean;
 } {
   const [driverLocation, setDriverLocation] = useState<LocationPayload | null>(null);
+  const [deliveryStatus, setDeliveryStatus] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!deliveryId) {
-      // Disconnect socket if deliveryId becomes null
-      socketService.disconnect();
-      return;
-    }
-
     const token = user?.token;
 
-    if (!token) {
-      console.warn('No token available for socket connection');
+    if (!deliveryId || !token) {
+      // Disconnect socket if deliveryId becomes null or token missing
+      socketService.disconnect();
       return;
     }
 
@@ -39,10 +36,16 @@ function useDeliveryTracking(deliveryId: string | null): {
       setDriverLocation(data);
     });
 
+    // Register status update callback
+    socketService.onStatusUpdate((data: StatusPayload) => {
+      setDeliveryStatus(data.status);
+    });
+
     // Cleanup on unmount or deliveryId change
     return () => {
       socketService.leaveDelivery(deliveryId);
       socketService.offLocationUpdate();
+      socketService.offStatusUpdate();
       // Only disconnect if deliveryId becomes null (handled in outer effect)
     };
   }, [deliveryId, user?.token]);
@@ -51,6 +54,7 @@ function useDeliveryTracking(deliveryId: string | null): {
 
   return {
     driverLocation,
+    deliveryStatus,
     isConnected,
   };
 }

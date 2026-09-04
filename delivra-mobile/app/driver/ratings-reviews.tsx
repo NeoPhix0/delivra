@@ -1,8 +1,9 @@
 import colors from "@constants/colors";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   FlatList,
   ListRenderItemInfo,
@@ -12,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { driverService } from "@services/api";
 
 interface Review {
   id: string;
@@ -22,45 +24,45 @@ interface Review {
   orderId: string;
 }
 
-// TODO: connect to API when endpoint is available
-const reviews: Review[] = [
-  {
-    id: "1",
-    customer: "John Doe",
-    rating: 5,
-    date: "2024-04-20",
-    comment: "Excellent driver! Very professional and arrived early.",
-    orderId: "#DEL-001",
-  },
-  {
-    id: "2",
-    customer: "Sara Smith",
-    rating: 4,
-    date: "2024-04-19",
-    comment: "Good service, on time.",
-    orderId: "#DEL-002",
-  },
-  {
-    id: "3",
-    customer: "Mike Johnson",
-    rating: 5,
-    date: "2024-04-18",
-    comment: "Amazing! Will definitely request again.",
-    orderId: "#DEL-003",
-  },
-];
-
 export default function RatingsReviewsScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [ratingCounts, setRatingCounts] = useState<{ star: number; count: number }[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
 
-  const averageRating = 4.7;
-  const totalReviews = reviews.length;
+  const loadRatings = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await driverService.getRatings();
+      const data = response.data || response;
+      setAverageRating(data.averageRating || 0);
+      setTotalReviews(data.totalRatings || 0);
+      setRatingCounts(data.ratingCounts || []);
+      setReviews(
+        (data.reviews || []).map((r: any) => ({
+          id: String(r.id),
+          customer: r.client?.fullName || "Anonymous",
+          rating: r.rating || 0,
+          date: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : "",
+          comment: r.review || "",
+          orderId: r.trackingNumber || `#DEL-${String(r.id).padStart(6, "0")}`,
+        }))
+      );
+    } catch (err: any) {
+      console.error("Load ratings error:", err);
+      setError(err.message || "Failed to load ratings");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const rating5Count = reviews.filter((r) => r.rating === 5).length;
-  const rating4Count = reviews.filter((r) => r.rating === 4).length;
-  const rating3Count = reviews.filter((r) => r.rating === 3).length;
-  const rating2Count = reviews.filter((r) => r.rating === 2).length;
-  const rating1Count = reviews.filter((r) => r.rating === 1).length;
+  useEffect(() => {
+    loadRatings();
+  }, [loadRatings]);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -69,6 +71,17 @@ export default function RatingsReviewsScreen() {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  const getCountForStar = (star: number) => {
+    const found = ratingCounts.find((rc) => rc.star === star);
+    return found?.count || 0;
+  };
+
+  const rating5Count = getCountForStar(5);
+  const rating4Count = getCountForStar(4);
+  const rating3Count = getCountForStar(3);
+  const rating2Count = getCountForStar(2);
+  const rating1Count = getCountForStar(1);
 
   const renderReviewCard = ({ item }: ListRenderItemInfo<Review>) => (
     <Animated.View
@@ -93,6 +106,45 @@ export default function RatingsReviewsScreen() {
       <Text style={styles.reviewComment}>{item.comment}</Text>
     </Animated.View>
   );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+        <View style={[styles.header, { backgroundColor: colors.primary }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Ratings & Reviews</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+        <View style={[styles.header, { backgroundColor: colors.primary }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Ratings & Reviews</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+          <Text style={{ color: colors.error, fontSize: 14, textAlign: "center", marginBottom: 12 }}>{error}</Text>
+          <TouchableOpacity style={{ backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }} onPress={loadRatings}>
+            <Text style={{ color: colors.white, fontSize: 14, fontWeight: "600" }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -120,7 +172,7 @@ export default function RatingsReviewsScreen() {
         ]}
       >
         <View style={styles.averageContainer}>
-          <Text style={styles.averageRating}>{averageRating}</Text>
+          <Text style={styles.averageRating}>{averageRating.toFixed(1)}</Text>
           <View style={styles.starsContainer}>
             <Text style={styles.starIcon}>⭐</Text>
             <Text style={styles.starIcon}>⭐</Text>
@@ -141,7 +193,7 @@ export default function RatingsReviewsScreen() {
               <View
                 style={[
                   styles.progressBar,
-                  { width: `${(rating5Count / totalReviews) * 100}%` },
+                  { width: totalReviews > 0 ? `${(rating5Count / totalReviews) * 100}%` : "0%" },
                 ]}
               />
             </View>
@@ -153,7 +205,7 @@ export default function RatingsReviewsScreen() {
               <View
                 style={[
                   styles.progressBar,
-                  { width: `${(rating4Count / totalReviews) * 100}%` },
+                  { width: totalReviews > 0 ? `${(rating4Count / totalReviews) * 100}%` : "0%" },
                 ]}
               />
             </View>
@@ -165,7 +217,7 @@ export default function RatingsReviewsScreen() {
               <View
                 style={[
                   styles.progressBar,
-                  { width: `${(rating3Count / totalReviews) * 100}%` },
+                  { width: totalReviews > 0 ? `${(rating3Count / totalReviews) * 100}%` : "0%" },
                 ]}
               />
             </View>
@@ -177,7 +229,7 @@ export default function RatingsReviewsScreen() {
               <View
                 style={[
                   styles.progressBar,
-                  { width: `${(rating2Count / totalReviews) * 100}%` },
+                  { width: totalReviews > 0 ? `${(rating2Count / totalReviews) * 100}%` : "0%" },
                 ]}
               />
             </View>
@@ -189,7 +241,7 @@ export default function RatingsReviewsScreen() {
               <View
                 style={[
                   styles.progressBar,
-                  { width: `${(rating1Count / totalReviews) * 100}%` },
+                  { width: totalReviews > 0 ? `${(rating1Count / totalReviews) * 100}%` : "0%" },
                 ]}
               />
             </View>

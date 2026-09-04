@@ -41,19 +41,6 @@ interface DriverItem {
   about?: string;
 }
 
-const driverImages = {
-  driver1:
-    "https://i.pinimg.com/736x/bd/d3/bc/bdd3bc41294ea5a7d04f70c36893d3eb.jpg",
-  driver2:
-    "https://i.pinimg.com/webp/1200x/1c/85/2e/1c852ea928150dfcf54c5457dbca0a35.webp",
-  driver3:
-    "https://i.pinimg.com/736x/8c/14/00/8c1400d11a34eb5f3de3d9212da81882.jpg",
-  driver4:
-    "https://i.pinimg.com/webp/1200x/85/fc/09/85fc097b34bff079cfe2c2ca2c680870.webp",
-};
-
-const defaultAvatars = [driverImages.driver1, driverImages.driver2, driverImages.driver3, driverImages.driver4];
-
 const vehicleIcons: Record<string, string> = {
   Motorcycle: "zap",
   Scooter: "wind",
@@ -79,16 +66,18 @@ export default function DriversListScreen() {
     try {
       setLoading(true);
       setError(null);
-      const data = await deliveryService.getAvailableDrivers();
+      const pickupLat = routeParams?.pickupLat as string | undefined;
+      const pickupLng = routeParams?.pickupLng as string | undefined;
+      const data = await deliveryService.getAvailableDrivers(pickupLat, pickupLng);
       const items = Array.isArray(data) ? data : (data?.drivers || []);
       const transformed: DriverItem[] = items.map((d: any, index: number) => ({
         id: d.id || String(index),
-        name: d.full_name || d.name || 'Unknown',
+        name: d.fullName || 'Unknown',
         rating: d.rating || 4.5,
-        pricePerKm: d.price_per_km || d.pricePerKm || 2.5,
-        distance: d.distance_km || d.distance || 0,
-        totalPrice: d.total_price || d.totalPrice || 0,
-        image: d.profile_picture || d.image || d.avatar || defaultAvatars[index % defaultAvatars.length],
+        pricePerKm: d.pricePerKm ?? 2.5,
+        distance: d.distanceKm ?? 0,
+        totalPrice: d.totalPrice ?? 0,
+        image: d.profilePicture || d.avatar || null,
         status: d.is_online === false ? 'busy' : 'available',
         completed: d.total_deliveries || d.completed_deliveries || d.completed || 0,
         vehicle: d.vehicle_type || d.vehicle || 'Motorcycle',
@@ -272,10 +261,16 @@ export default function DriversListScreen() {
                     isSelected && styles.avatarRingSelected,
                   ]}
                 >
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.driverAvatarImage}
-                  />
+                  {item.image ? (
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.driverAvatarImage}
+                    />
+                  ) : (
+                    <View style={[styles.driverAvatarImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primarySoft }]}>
+                      <Feather name="user" size={24} color={colors.primary} />
+                    </View>
+                  )}
                   <View
                     style={[
                       styles.onlineDot,

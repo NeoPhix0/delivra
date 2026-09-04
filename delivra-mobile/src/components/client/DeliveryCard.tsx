@@ -13,6 +13,8 @@ export interface DeliveryItem {
   price: string;
   icon: string;
   bgColor: string;
+  pickupAddress?: string;
+  deliveryAddress?: string;
 }
 
 interface DeliveryCardProps {
@@ -24,7 +26,7 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({ delivery }) => {
     <TouchableOpacity
       style={styles.orderCard}
       activeOpacity={0.8}
-      onPress={() => router.push({ pathname: "/client/order-tracking" })}
+      onPress={() => router.push({ pathname: "/client/order-tracking", params: { id: delivery.id } })}
     >
       <View style={styles.orderCardInner}>
         <View style={styles.orderLeft}>
@@ -41,6 +43,16 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({ delivery }) => {
         </View>
         <Text style={styles.orderPrice}>{delivery.price}</Text>
       </View>
+      {delivery.pickupAddress && (
+        <Text numberOfLines={1} style={{ fontSize: 11, color: colors.textMuted }}>
+          From: {delivery.pickupAddress}
+        </Text>
+      )}
+      {delivery.deliveryAddress && (
+        <Text numberOfLines={1} style={{ fontSize: 11, color: colors.textMuted }}>
+          To: {delivery.deliveryAddress}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 };

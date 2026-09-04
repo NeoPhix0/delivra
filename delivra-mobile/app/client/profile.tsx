@@ -62,9 +62,9 @@ export default function ProfileScreen() {
       if (statsRes) {
         const stats = statsRes;
         setStats([
-          { label: "Total Orders", value: String(stats.total_orders || 0), icon: "package", color: colors.secondary },
-          { label: "Completed", value: String(stats.completed_orders || 0), icon: "check-circle", color: colors.success },
-          { label: "Cancelled", value: String(stats.cancelled_orders || 0), icon: "x-circle", color: colors.error },
+          { label: "Total Orders", value: String(stats.totalOrders || stats.total_orders || 0), icon: "package", color: colors.secondary },
+          { label: "Completed", value: String(stats.completedOrders || stats.completed_orders || 0), icon: "check-circle", color: colors.success },
+          { label: "Cancelled", value: String(stats.cancelledOrders || stats.cancelled_orders || 0), icon: "x-circle", color: colors.error },
         ]);
       }
     } catch (err: any) {

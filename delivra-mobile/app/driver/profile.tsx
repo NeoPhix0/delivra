@@ -29,6 +29,7 @@ export default function DriverProfileScreen() {
   const [vehicleType, setVehicleType] = useState("");
   const [vehiclePlate, setVehiclePlate] = useState("");
   const [experienceYears, setExperienceYears] = useState("");
+  const [pricePerKm, setPricePerKm] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,9 +63,10 @@ export default function DriverProfileScreen() {
         setName(driverRes.name || userRes?.fullName || userRes?.full_name || "");
         setPhone(driverRes.phone || userRes?.phone || "");
         // After adaptKeys(), API fields become camelCase
-        setVehicleType(driverRes.vehicleType || driverRes.vehicle_type || "");
-        setVehiclePlate(driverRes.licenseNumber || driverRes.license_number || "");
+        setVehicleType(driverRes.vehicle?.type || driverRes.vehicleType || driverRes.vehicle_type || "");
+        setVehiclePlate(driverRes.vehicle?.plate || driverRes.licenseNumber || driverRes.license_number || "");
         setExperienceYears(String(driverRes.experienceYears ?? driverRes.experience_years ?? ""));
+        setPricePerKm(String(driverRes.pricePerKm ?? driverRes.price_per_km ?? "2.5"));
       } else if (userRes) {
         setName(userRes.fullName || userRes.full_name || "");
         setPhone(userRes.phone || "");
@@ -113,6 +115,7 @@ export default function DriverProfileScreen() {
       if (vehicleType.trim()) driverUpdate.vehicleType = vehicleType.trim();
       if (vehiclePlate.trim()) driverUpdate.licenseNumber = vehiclePlate.trim();
       if (experienceYears.trim()) driverUpdate.experienceYears = parseInt(experienceYears.trim(), 10) || 0;
+      if (pricePerKm.trim()) driverUpdate.pricePerKm = parseFloat(pricePerKm.trim()) || 2.5;
 
       if (Object.keys(driverUpdate).length > 0) {
         await driverService.updateProfile(driverUpdate);
@@ -207,6 +210,7 @@ export default function DriverProfileScreen() {
           <InfoRow icon="truck" label="Vehicle Type" value={vehicleType} isEditing={isEditing} onChangeText={setVehicleType} />
           <InfoRow icon="hash" label="License Number" value={vehiclePlate} isEditing={isEditing} onChangeText={setVehiclePlate} />
           <InfoRow icon="briefcase" label="Experience" value={experienceYears ? `${experienceYears} years` : ""} isEditing={isEditing} onChangeText={setExperienceYears} keyboardType="numeric" />
+          <InfoRow icon="dollar-sign" label="Price per KM (DA)" value={pricePerKm} isEditing={isEditing} onChangeText={setPricePerKm} keyboardType="decimal-pad" />
           <InfoRow icon="globe" label="Languages" value={(profileData?.languages || []).join(", ") || ""} isEditing={false} onChangeText={() => {}} last />
 
           {isEditing && (

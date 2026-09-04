@@ -23,7 +23,7 @@ import { httpClient } from '@services/httpClient';
 
 
 export default function DeliveryDetailsScreen() {
-  const { categoryId, categoryIcon } = useLocalSearchParams();
+  const { categoryId, categoryIcon, categoryName } = useLocalSearchParams();
   const [categoryInfo, setCategoryInfo] = useState<{ displayName: string; icon: string; color: string } | null>(null);
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupPhone, setPickupPhone] = useState("");
@@ -77,8 +77,15 @@ export default function DeliveryDetailsScreen() {
       other: colors.primary,
     };
 
-    // Charger les infos de la catégorie depuis l'API
-    if (categoryId) {
+    // Use categoryName passed from step1, fall back to API call if missing
+    if (categoryName) {
+      const catName = String(categoryName).toLowerCase();
+      setCategoryInfo({
+        displayName: String(categoryName),
+        icon: categoryEmojis[catName] || "📦",
+        color: categoryColors[catName] || colors.primary,
+      });
+    } else if (categoryId) {
       categoryService.getCategoryById(categoryId as string).then((cat: any) => {
         if (cat) {
           const catName = (cat.name || 'other').toLowerCase();
@@ -226,10 +233,11 @@ export default function DeliveryDetailsScreen() {
       return;
     }
     router.push({
-      pathname: "/client/order-confirmation",
+      pathname: "/client/drivers-list",
       params: {
         categoryId: String(categoryId || ""),
         categoryIcon: String(categoryIcon || ""),
+        categoryName: String(categoryName || ""),
         pickupAddress: String(pickupAddress),
         deliveryAddress: String(deliveryAddress),
         pickupPhone: String(pickupPhone),

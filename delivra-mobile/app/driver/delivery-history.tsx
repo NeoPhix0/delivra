@@ -51,7 +51,7 @@ export default function DeliveryHistoryScreen() {
       // Transform API data to match the UI structure
       const transformedData = data.deliveries.map((d: any) => ({
         id: d.id,
-        orderId: `#DEL-${String(d.id).padStart(6, '0')}`,
+        orderId: d.trackingNumber || `#DEL-${String(d.id).padStart(6, '0')}`,
         date: new Date(d.createdAt || d.created_at).toLocaleDateString('en-US', { 
           month: 'short', day: 'numeric', year: 'numeric' 
         }),

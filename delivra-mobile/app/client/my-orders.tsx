@@ -75,7 +75,7 @@ export default function MyOrdersScreen() {
 
       const active = deliveries.filter((d: any) => {
         const s = (d.status || '').toUpperCase();
-        return s === 'PENDING' || s === 'ACCEPTED' || s === 'PICKED_UP' || s === 'ON_THE_WAY';
+        return s === 'PENDING' || s === 'AWAITING_DRIVER_CONFIRMATION' || s === 'ACCEPTED' || s === 'PICKED_UP' || s === 'ON_THE_WAY';
       }).map((d: any) => formatOrder(d));
 
       const completed = deliveries.filter((d: any) => (d.status || '').toUpperCase() === 'DELIVERED').map((d: any) => formatOrder(d));
@@ -104,13 +104,14 @@ export default function MyOrdersScreen() {
   const formatStatus = (status: string) => {
     const statusMap: Record<string, string> = {
       pending: 'Preparing',
+      awaiting_driver_confirmation: 'Awaiting Confirmation',
       accepted: 'In Transit',
       picked_up: 'Picked Up',
       on_the_way: 'On the Way',
       delivered: 'Delivered',
       cancelled: 'Cancelled',
     };
-    return statusMap[status] || status;
+    return statusMap[(status || '').toLowerCase()] || status;
   };
 
   const getStatusColor = (status: string) => {
@@ -130,10 +131,8 @@ export default function MyOrdersScreen() {
   };
 
   const handleViewDetails = (order: any) => {
-    if (["Preparing", "In Transit", "Picked Up", "On the Way"].includes(order.status)) {
+    if (["Preparing", "Awaiting Confirmation", "In Transit", "Picked Up", "On the Way"].includes(order.status)) {
       router.push({ pathname: "/client/order-tracking", params: { id: order.id } });
-    } else if (order.status === "Delivered") {
-      router.push("/client/rating" as import('expo-router').Href);
     }
   };
 
@@ -206,6 +205,13 @@ export default function MyOrdersScreen() {
         ))}
       </View>
 
+      {/* Create New Delivery Button */}
+      <TouchableOpacity style={styles.createBtn} activeOpacity={0.9} onPress={() => router.push({ pathname: "/client/create-delivery/step1-category" })}>
+        <LinearGradient colors={[colors.primary, colors.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.createGrad}>
+          <Feather name="plus-circle" size={22} color={colors.white} /><Text style={styles.createText}>Create New Delivery</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
       {/* Orders List */}
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -268,9 +274,18 @@ export default function MyOrdersScreen() {
                   <TouchableOpacity style={styles.detailsButton}>
                     <Text style={styles.detailsButtonText}>View Details →</Text>
                   </TouchableOpacity>
-                </View>
+              </View>
               </LinearGradient>
             </TouchableOpacity>
+            {order.status === "Delivered" && (
+              <TouchableOpacity
+                style={styles.rateButton}
+                onPress={() => (router as any).push({ pathname: "/client/rating", params: { id: order.id } })}
+              >
+                <Feather name="star" size={14} color={colors.primary} />
+                <Text style={styles.rateButtonText}>Rate this delivery</Text>
+              </TouchableOpacity>
+            )}
           </Animated.View>
         ))}
       </ScrollView>
@@ -360,6 +375,30 @@ const styles = StyleSheet.create({
   tabBadgeTextActive: {
     color: colors.primary,
   },
+  createBtn: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+    borderRadius: 32,
+    overflow: "hidden",
+  },
+  createGrad: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 16,
+  },
+  createText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   listContainer: {
     paddingHorizontal: 16,
     paddingBottom: 30,
@@ -447,5 +486,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.primary,
     fontWeight: "500",
+  },
+  rateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    marginTop: 4,
+    marginHorizontal: 16,
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    gap: 6,
+  },
+  rateButtonText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "600",
   },
 });

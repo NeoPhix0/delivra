@@ -33,7 +33,12 @@ export const CategoryList: React.FC<CategoryListProps> = ({ categories }) => {
       </View>
       <View style={styles.categoriesGrid}>
         {categories.map((cat) => (
-          <TouchableOpacity key={cat.id} style={[styles.categoryCard, { backgroundColor: cat.bgColor }]} activeOpacity={0.85}>
+          <TouchableOpacity key={cat.id} style={[styles.categoryCard, { backgroundColor: cat.bgColor }]} activeOpacity={0.85}
+            onPress={() => router.push({ 
+              pathname: "/client/create-delivery/step1-category",
+              params: { categoryId: cat.id }
+            })}
+          >
             <View style={[styles.categoryIcon, { backgroundColor: cat.color + "20" }]}>
               <Image source={{ uri: cat.image }} style={styles.categoryImage} />
             </View>

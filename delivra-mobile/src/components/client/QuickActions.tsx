@@ -2,15 +2,16 @@ import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import colors from "@constants/colors";
 
 interface QuickActionsProps {
   /** Handler appelé avec le nom de l'action ("track" | "history") */
   onActionPress: (action: string) => void;
+  activeDeliveryId?: string | null;
 }
 
-export const QuickActions: React.FC<QuickActionsProps> = ({ onActionPress }) => {
+export const QuickActions: React.FC<QuickActionsProps> = ({ onActionPress, activeDeliveryId }) => {
   return (
     <View style={styles.quickSection}>
       <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
@@ -19,7 +20,11 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onActionPress }) => 
           style={styles.quickCard}
           onPress={() => {
             onActionPress("track");
-            router.push({ pathname: "/client/order-tracking" });
+            if (activeDeliveryId) {
+              router.push({ pathname: "/client/order-tracking", params: { id: activeDeliveryId } });
+            } else {
+              Alert.alert("No active order", "You have no active delivery to track.");
+            }
           }}
         >
           <LinearGradient colors={[colors.primarySoft, colors.white]} style={styles.quickIconBg}>

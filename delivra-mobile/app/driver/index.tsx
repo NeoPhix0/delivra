@@ -3,6 +3,7 @@ import { Href, router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated, ScrollView, StatusBar, StyleSheet, Switch,
   Text, TouchableOpacity, View,
 } from "react-native";
@@ -85,7 +86,11 @@ export default function DriverDashboard() {
         trackingNumber: d.trackingNumber || d.tracking_number || '',
       }));
 
-      setIncomingRequests(mappedDeliveries.slice(0, 3));
+      // Prioritize pre-selected (AWAITING_DRIVER_CONFIRMATION) first, then open (PENDING)
+      const preSelected = mappedDeliveries.filter(d => d.status === 'AWAITING_DRIVER_CONFIRMATION');
+      const openDeliveries = mappedDeliveries.filter(d => d.status === 'PENDING');
+      const combined = [...preSelected, ...openDeliveries];
+      setIncomingRequests(combined.slice(0, 3));
       setRecentDeliveries(mappedDeliveries.slice(0, 3));
     } catch (err: any) {
       console.error('Error loading driver dashboard:', err);
@@ -101,14 +106,42 @@ export default function DriverDashboard() {
     }
   };
 
-  const quickActions: { id: string; title: string; icon: string; route: Href; color: string; bg: string }[] = [
-    { id: "active", title: "Active", icon: "truck", route: "/driver/active-delivery" as Href, color: colors.secondary, bg: colors.secondarySoft },
-    { id: "history", title: "History", icon: "clock", route: "/driver/delivery-history" as Href, color: colors.textSecondary, bg: colors.background },
-    { id: "withdraw", title: "Withdraw", icon: "credit-card", route: "/driver/withdraw-earnings" as Href, color: colors.success, bg: colors.success + "20" },
-    { id: "ratings", title: "Ratings", icon: "star", route: "/driver/ratings-reviews" as Href, color: colors.warning, bg: colors.warning + "20" },
-    { id: "earnings", title: "Earnings", icon: "bar-chart-2", route: "/driver/earnings" as Href, color: colors.primary, bg: colors.primarySoft },
-    { id: "profile", title: "Profile", icon: "user", route: "/driver/profile" as Href, color: colors.secondary, bg: colors.secondarySoft },
+  const activeDeliveryId = incomingRequests.find(r =>
+    ['ACCEPTED', 'PICKED_UP', 'ON_THE_WAY'].includes(r.status)
+  )?.id;
+
+  const quickActions: { id: string; title: string; icon: string; onPress: () => void; color: string; bg: string }[] = [
+    { id: "active", title: "Active", icon: "truck", onPress: () => {
+      if (activeDeliveryId) {
+        router.push({ pathname: "/driver/active-delivery", params: { id: activeDeliveryId } });
+      } else {
+        Alert.alert("No active delivery", "You have no active delivery at the moment.");
+      }
+    }, color: colors.secondary, bg: colors.secondarySoft },
+    { id: "history", title: "History", icon: "clock", onPress: () => router.push("/driver/delivery-history" as Href), color: colors.textSecondary, bg: colors.background },
+    { id: "withdraw", title: "Withdraw", icon: "credit-card", onPress: () => router.push("/driver/withdraw-earnings" as Href), color: colors.success, bg: colors.success + "20" },
+    { id: "ratings", title: "Ratings", icon: "star", onPress: () => router.push("/driver/ratings-reviews" as Href), color: colors.warning, bg: colors.warning + "20" },
+    { id: "earnings", title: "Earnings", icon: "bar-chart-2", onPress: () => router.push("/driver/earnings" as Href), color: colors.primary, bg: colors.primarySoft },
+    { id: "profile", title: "Profile", icon: "user", onPress: () => router.push("/driver/profile" as Href), color: colors.secondary, bg: colors.secondarySoft },
   ];
+
+  const handleAccept = async (deliveryId: string) => {
+    try {
+      await driverService.acceptDelivery(deliveryId);
+      router.push({ pathname: "/driver/active-delivery", params: { id: deliveryId } });
+    } catch (e) {
+      Alert.alert("Error", "Failed to accept delivery.");
+    }
+  };
+
+  const handleReject = async (deliveryId: string) => {
+    try {
+      await driverService.rejectDelivery(deliveryId);
+      loadData();
+    } catch (e) {
+      Alert.alert("Error", "Failed to reject delivery.");
+    }
+  };
 
   const userName = user?.full_name || user?.email?.split('@')[0] || 'Driver';
 
@@ -181,7 +214,7 @@ export default function DriverDashboard() {
                   label={action.title}
                   color={action.color}
                   bg={action.bg}
-                  onPress={() => router.push(action.route)}
+                  onPress={action.onPress}
                 />
               </View>
             ))}
@@ -199,7 +232,14 @@ export default function DriverDashboard() {
             <View key={request.id} style={styles.requestCard}>
               <View style={styles.requestHeader}>
                 <View style={styles.requestLeft}>
-                  <Text style={styles.requestPickup}>{request.pickup}</Text>
+                  <View style={styles.requestTitleRow}>
+                    <Text style={styles.requestPickup}>{request.pickup}</Text>
+                    {request.status === 'AWAITING_DRIVER_CONFIRMATION' && (
+                      <View style={[styles.forYouBadge, { backgroundColor: colors.warning + "20" }]}>
+                        <Text style={[styles.forYouBadgeText, { color: colors.warning }]}>For You</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.requestDelivery}>{request.delivery}</Text>
                   <View style={styles.requestMeta}>
                     <Feather name="clock" size={12} color={colors.textSecondary} />
@@ -211,10 +251,10 @@ export default function DriverDashboard() {
                 <Text style={styles.requestAmount}>{request.amount}</Text>
               </View>
               <View style={styles.requestActions}>
-                <TouchableOpacity style={styles.rejectBtn}>
+                <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(request.id)}>
                   <Text style={styles.rejectBtnText}>Reject</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.acceptBtn}>
+                <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAccept(request.id)}>
                   <Text style={styles.acceptBtnText}>Accept</Text>
                 </TouchableOpacity>
               </View>
@@ -264,6 +304,9 @@ const styles = StyleSheet.create({
   requestCard: { backgroundColor: colors.white, borderRadius: 20, marginBottom: 12, padding: 16, borderWidth: 1, borderColor: colors.border, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },
   requestHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
   requestLeft: { flex: 1 },
+  requestTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  forYouBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  forYouBadgeText: { fontSize: 10, fontWeight: "700" },
   requestPickup: { fontSize: 15, fontWeight: "600", color: colors.black, marginBottom: 2 },
   requestDelivery: { fontSize: 13, color: colors.textSecondary, marginBottom: 6 },
   requestMeta: { flexDirection: "row", alignItems: "center", gap: 6 },

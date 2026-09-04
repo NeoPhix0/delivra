@@ -107,7 +107,7 @@ export default function MyOrdersScreen() {
 
       const active = deliveries.filter((d: any) => {
         const s = (d.status || '').toUpperCase();
-        return s === 'PENDING' || s === 'ACCEPTED' || s === 'PICKED_UP' || s === 'ON_THE_WAY';
+        return s === 'PENDING' || s === 'AWAITING_DRIVER_CONFIRMATION' || s === 'ACCEPTED' || s === 'PICKED_UP' || s === 'ON_THE_WAY';
       }).map((d: any) => formatOrder(d));
 
       const completed = deliveries.filter((d: any) => (d.status || '').toUpperCase() === 'DELIVERED').map((d: any) => formatOrder(d));
@@ -136,6 +136,7 @@ export default function MyOrdersScreen() {
     const normalized = (status || '').toLowerCase();
     const statusMap: Record<string, string> = {
       pending: 'Preparing',
+      awaiting_driver_confirmation: 'Awaiting Confirmation',
       accepted: 'In Transit',
       picked_up: 'Picked Up',
       on_the_way: 'On the Way',
@@ -147,7 +148,7 @@ export default function MyOrdersScreen() {
 
   const getStatusColor = (status: string) => {
     if (status === "Delivered") return colors.success;
-    if (status === "In Transit" || status === "Preparing")
+    if (status === "In Transit" || status === "Preparing" || status === "Awaiting Confirmation")
       return colors.secondary;
     if (status === "Cancelled") return colors.error;
     return colors.warning;
@@ -155,17 +156,17 @@ export default function MyOrdersScreen() {
 
   const getStatusBgColor = (status: string) => {
     if (status === "Delivered") return colors.success + "15";
-    if (status === "In Transit" || status === "Preparing")
+    if (status === "In Transit" || status === "Preparing" || status === "Awaiting Confirmation")
       return colors.secondary + "15";
     if (status === "Cancelled") return colors.error + "15";
     return colors.warning + "15";
   };
 
   const handleViewDetails = (order: Order) => {
-    if (["Preparing", "In Transit", "Picked Up", "On the Way"].includes(order.status)) {
+    if (["Preparing", "Awaiting Confirmation", "In Transit", "Picked Up", "On the Way"].includes(order.status)) {
       router.push({ pathname: "/client/order-tracking", params: { id: order.id } });
     } else if (order.status === "Delivered") {
-      router.push("/client/rating" as import('expo-router').Href);
+      router.push("/client/my-orders");
     }
   };
 
@@ -289,6 +290,13 @@ export default function MyOrdersScreen() {
         ))}
       </View>
 
+      {/* Create New Delivery Button */}
+      <TouchableOpacity style={styles.createBtn} activeOpacity={0.9} onPress={() => router.push({ pathname: "/client/create-delivery/step1-category" })}>
+        <LinearGradient colors={[colors.primary, colors.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.createGrad}>
+          <Feather name="plus-circle" size={22} color={colors.white} /><Text style={styles.createText}>Create New Delivery</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
       <FlatList
         data={ordersData[activeTab]}
         renderItem={renderOrderCard}
@@ -339,6 +347,30 @@ const styles = StyleSheet.create({
   tabBadgeActive: { backgroundColor: colors.white },
   tabBadgeText: { fontSize: 10, fontWeight: "bold", color: colors.primary },
   tabBadgeTextActive: { color: colors.primary },
+  createBtn: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+    borderRadius: 32,
+    overflow: "hidden",
+  },
+  createGrad: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 16,
+  },
+  createText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   listContainer: { paddingHorizontal: 16, paddingBottom: 30 },
 
   // Order Card

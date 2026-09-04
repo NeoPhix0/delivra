@@ -49,7 +49,7 @@ export default function EarningsScreen() {
           id: t.id || String(index),
           date: t.date || new Date(t.created_at).toLocaleString(),
           amount: t.amount || 0,
-          orderId: t.order_id || `#DEL-${(t.id || '').substring(0, 8)}`,
+          orderId: t.order_id || `#DEL-${String(t.id || '').substring(0, 8)}`,
           status: t.status || 'completed',
         }))
       );

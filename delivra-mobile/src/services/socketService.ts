@@ -4,12 +4,19 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 let socket: Socket | null = null;
 let locationUpdateCallback: ((data: LocationPayload) => void) | null = null;
+let statusUpdateCallback: ((data: StatusPayload) => void) | null = null;
 
 export interface LocationPayload {
   lat: number;
   lng: number;
   heading?: number;
   timestamp: string;
+}
+
+export interface StatusPayload {
+  deliveryId: number;
+  status: string;
+  updatedAt: string;
 }
 
 /**
@@ -47,6 +54,11 @@ function connect(token: string): void {
   // Register location update listener if callback is set
   if (locationUpdateCallback) {
     socket.on('delivery:location', locationUpdateCallback);
+  }
+
+  // Register status update listener if callback is set
+  if (statusUpdateCallback) {
+    socket.on('delivery:status', statusUpdateCallback);
   }
 }
 
@@ -112,6 +124,28 @@ function offLocationUpdate(): void {
 }
 
 /**
+ * Register callback for delivery:status events
+ * @param callback - Function to call when status updates are received
+ */
+function onStatusUpdate(callback: (data: StatusPayload) => void): void {
+  statusUpdateCallback = callback;
+
+  if (socket?.connected) {
+    socket.on('delivery:status', callback);
+  }
+}
+
+/**
+ * Remove status update listener
+ */
+function offStatusUpdate(): void {
+  if (socket && statusUpdateCallback) {
+    socket.off('delivery:status', statusUpdateCallback);
+  }
+  statusUpdateCallback = null;
+}
+
+/**
  * Check if socket is connected
  * @returns true if connected, false otherwise
  */
@@ -137,6 +171,8 @@ export const socketService = {
   leaveDelivery,
   onLocationUpdate,
   offLocationUpdate,
+  onStatusUpdate,
+  offStatusUpdate,
   isConnected,
   emit,
 };

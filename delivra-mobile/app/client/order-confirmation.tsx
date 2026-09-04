@@ -59,10 +59,12 @@ export default function OrderConfirmationScreen() {
   const weight = (params.weight as string) || "";
   const categoryId = (params.categoryId as string) || null;
   const categoryIcon = (params.categoryIcon as string) || "";
+  const categoryNameParam = (params.categoryName as string) || "";
   const pickupLat = (params.pickupLat as string) || "";
   const pickupLng = (params.pickupLng as string) || "";
   const deliveryLat = (params.deliveryLat as string) || "";
   const deliveryLng = (params.deliveryLng as string) || "";
+  const driverId = (params.driverId as string) || "";
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -173,11 +175,12 @@ export default function OrderConfirmationScreen() {
         deliveryPhone,
         notes: description,
         weight: parseFloat(weight) || 0,
-        ...(categoryId ? { categoryId: parseInt(categoryId, 10) } : {}),
+        ...(categoryId && !isNaN(parseInt(categoryId, 10)) ? { categoryId: parseInt(categoryId, 10) } : {}),
         ...(pickupLat ? { pickupLat: parseFloat(pickupLat) } : {}),
         ...(pickupLng ? { pickupLng: parseFloat(pickupLng) } : {}),
         ...(deliveryLat ? { deliveryLat: parseFloat(deliveryLat) } : {}),
         ...(deliveryLng ? { deliveryLng: parseFloat(deliveryLng) } : {}),
+        ...(driverId ? { driverId: Number(driverId) } : {}),
       };
       const response = await deliveryService.createDelivery(deliveryData);
       const newId = response?.delivery?.id || response?.id;
@@ -240,7 +243,7 @@ export default function OrderConfirmationScreen() {
   const driverPrice = (delivery?.driver?.driverProfile?.pricePerKm ?? parseFloat(params.driverPrice as string)) || 0;
   const driverImage = (params.driverImage as string) || "";
   const distance = (delivery?.distanceKm ?? parseFloat(params.distance as string)) || 0;
-  const categoryName = delivery?.category?.displayName || delivery?.category?.name || categoryIcon || "—";
+  const categoryName = delivery?.category?.displayName || delivery?.category?.name || categoryNameParam || categoryIcon || "—";
   const estimatedPrice = delivery?.totalPrice ?? 0;
   const buttonLabel = deliveryId ? "Track Order" : "Confirm Order";
 
